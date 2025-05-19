@@ -1,0 +1,50 @@
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+import os
+
+def decrypt_file(encrypted_file_path, encrypted_key_path, private_key_path):
+    """Decrypt file using ECDH and AES."""
+    # Load private key
+    with open(private_key_path, "rb") as key_file:
+        private_key = serialization.load_pem_private_key(key_file.read(), password=None)
+
+    # Load ephemeral public key
+    with open(encrypted_key_path, "rb") as f:
+        ephemeral_public_pem = f.read()
+        ephemeral_public_key = serialization.load_pem_public_key(ephemeral_public_pem)
+
+    # ECDH key exchange
+    shared_key = private_key.exchange(ec.ECDH(), ephemeral_public_key)
+
+    # Derive AES key
+    aes_key = HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=None,
+        info=b'handshake data',
+    ).derive(shared_key)
+
+    # Read encrypted file
+    with open(encrypted_file_path, "rb") as f:
+        iv = f.read(16)
+        encrypted_data = f.read()
+
+    # Decrypt using AES
+    cipher = Cipher(algorithms.AES(aes_key), modes.CBC(iv))
+    decryptor = cipher.decryptor()
+    decrypted_padded_data = decryptor.update(encrypted_data) + decryptor.finalize()
+
+    # Remove padding
+    pad_len = decrypted_padded_data[-1]
+    decrypted_data = decrypted_padded_data[:-pad_len]
+
+    # Save decrypted file
+    original_filename = encrypted_file_path.rsplit(".enc", 1)[0]
+    name, ext = os.path.splitext(original_filename)
+    decrypted_file_path = f"{name}-decrypted{ext}"
+    with open(decrypted_file_path, "wb") as f:
+        f.write(decrypted_data)
+
+    print("Decryption successful! File saved as", decrypted_file_path)
