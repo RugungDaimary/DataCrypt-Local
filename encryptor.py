@@ -6,8 +6,9 @@ import os
 
 def encrypt_file(file_path, public_key_str):
     """Encrypt file using ECDH for key exchange and AES for data encryption."""
-    # Load public key from string
-    public_key = serialization.load_pem_public_key(public_key_str.encode())
+    # Reconstruct PEM format from base64 key content
+    public_key_pem = '-----BEGIN PUBLIC KEY-----\n' + '\n'.join([public_key_str[i:i+64] for i in range(0, len(public_key_str), 64)]) + '\n-----END PUBLIC KEY-----\n'
+    public_key = serialization.load_pem_public_key(public_key_pem.encode())
 
     # Generate ephemeral private key
     ephemeral_private_key = ec.generate_private_key(ec.SECP384R1())

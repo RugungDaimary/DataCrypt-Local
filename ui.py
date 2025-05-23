@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QMessageBox, QFileDialog, QLabel, QHBoxLayout, QDialogButtonBox, QInputDialog, QSpacerItem, QSizePolicy
+from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QMessageBox, QFileDialog, QLabel, QHBoxLayout, QDialogButtonBox, QInputDialog, QSpacerItem, QSizePolicy, QDialog
 from PyQt6.QtGui import QFont, QClipboard, QPixmap 
 from PyQt6.QtCore import Qt, QTimer
 import sys
@@ -431,35 +431,61 @@ class DataCryptApp(QWidget):
             )
     
     def copy_public_key(self):
-        # Read the public key
         try:
-            # Use a relative path to access the public key
             public_key_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "keys", "public_key.pem")
             with open(public_key_path, "r") as f:
                 public_key = f.read()
 
-            # Create a message box
-            msg = QMessageBox(self)
-            msg.setWindowTitle("Public Key")
-            msg.setText(public_key)  # Directly set the public key text
-            msg.setIcon(QMessageBox.Icon.Information)
+            # Create a custom dialog
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Public Key")
+            layout = QVBoxLayout(dialog)
 
-            # Add only the Copy button
-            copy_button = msg.addButton("Copy", QMessageBox.ButtonRole.AcceptRole)
+            # Header label (navbar style)
+            header = QLabel("Public Key")
+            header.setFont(QFont("Arial", 16, QFont.Weight.Bold))
+            header.setStyleSheet("background-color: #23272A; color: #33B5E5; padding: 10px;")
+            header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(header)
 
-            # Create a QLabel for the "COPIED" message
-            copied_label = QLabel("COPIED", msg)
+            # Public key display
+            key_label = QLabel(public_key)
+            key_label.setStyleSheet("color: #FFFFFF; background-color: #2C2F33; padding: 10px;")
+            key_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            layout.addWidget(key_label)
+
+            # Copy button
+            button_layout = QHBoxLayout()
+            copy_button = QPushButton("Copy")
+            button_layout.addStretch()
+            button_layout.addWidget(copy_button)
+            button_layout.addStretch()
+            layout.addLayout(button_layout)
+
+            # Feedback label for copy action (reserve space with fixed height)
+            copied_label = QLabel("")
             copied_label.setStyleSheet("color: green; font-size: 14px;")
             copied_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            copied_label.setVisible(False)  # Initially hidden
-            msg.layout().addWidget(copied_label)  # Add it to the message box layout
+            copied_label.setFixedHeight(20)  # Reserve space so layout doesn't shift
+            layout.addWidget(copied_label)
 
-            # Connect the Copy button to the copy functionality
-            copy_button.clicked.connect(lambda: self.copy_to_clipboard(public_key, msg, copied_label))
+            def copy_to_clipboard():
+                QApplication.clipboard().setText(public_key)
+                copied_label.setText("COPIED")
+                # Use a QTimer that is a child of the dialog, so it will be deleted with the dialog
+                timer = QTimer(dialog)
+                timer.setSingleShot(True)
+                def clear_label():
+                    if copied_label:  # Only clear if label still exists
+                        copied_label.setText("")
+                timer.timeout.connect(clear_label)
+                timer.start(2000)
 
-            print("Showing message box...")  # Debug print
-            msg.exec()  # Show the message box
-            print("Message box closed.")  # Debug print
+            copy_button.clicked.connect(copy_to_clipboard)
+
+            dialog.setLayout(layout)
+            dialog.exec()
+
         except FileNotFoundError:
             msg = QMessageBox(self)
             msg.setWindowTitle("Error")
@@ -467,18 +493,6 @@ class DataCryptApp(QWidget):
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
-
-    def copy_to_clipboard(self, public_key, msg, copied_label):
-        clipboard = QApplication.clipboard()  # Get the clipboard from the QApplication instance
-        clipboard.setText(public_key)  # Copy the public key to the clipboard
-        print("Public key copied to clipboard.")  # Debug print
-
-        # Show the "COPIED" message
-        copied_label.setVisible(True)
-
-        # Hide the "COPIED" message after 2 seconds
-        QTimer.singleShot(2000, lambda: copied_label.setVisible(False))
-    
 
     def closeEvent(self, event):
         msg = QMessageBox(self)

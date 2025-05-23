@@ -18,9 +18,10 @@ def decrypt_file(encrypted_file_path, encrypted_key_path, private_key_path, send
     # Optionally load sender's public key
     if sender_public_key_str:
         try:
-            sender_public_key = serialization.load_pem_public_key(sender_public_key_str.encode())
+            # Reconstruct PEM format from base64 key content
+            sender_public_key_pem = '-----BEGIN PUBLIC KEY-----\n' + '\n'.join([sender_public_key_str[i:i+64] for i in range(0, len(sender_public_key_str), 64)]) + '\n-----END PUBLIC KEY-----\n'
+            sender_public_key = serialization.load_pem_public_key(sender_public_key_pem.encode())
             # Placeholder: Add cryptographic verification here if needed
-            # For example, compare sender_public_key.public_numbers() with expected values
             print("Sender's public key loaded for verification.")
         except Exception as e:
             raise ValueError(f"Invalid sender public key: {e}")
