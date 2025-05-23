@@ -434,11 +434,17 @@ class DataCryptApp(QWidget):
         try:
             public_key_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "keys", "public_key.pem")
             with open(public_key_path, "r") as f:
-                public_key = f.read()
+                pem = f.read()
+
+            # Extract only the base64 key content (remove header/footer and whitespace)
+            lines = pem.strip().splitlines()
+            key_lines = [line for line in lines if not line.startswith('-----')]
+            public_key = ''.join(key_lines)
 
             # Create a custom dialog
             dialog = QDialog(self)
-            dialog.setWindowTitle("Public Key")
+            # dialog.setWindowTitle("Public Key")
+            dialog.setFixedWidth(420)  # Set a smaller width for the dialog
             layout = QVBoxLayout(dialog)
 
             # Header label (navbar style)
@@ -448,10 +454,12 @@ class DataCryptApp(QWidget):
             header.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout.addWidget(header)
 
-            # Public key display
+            # Public key display (only the base64 key)
             key_label = QLabel(public_key)
             key_label.setStyleSheet("color: #FFFFFF; background-color: #2C2F33; padding: 10px;")
             key_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            key_label.setWordWrap(True)
+            key_label.setFixedWidth(380)  # Set a smaller width for the label
             layout.addWidget(key_label)
 
             # Copy button
@@ -472,11 +480,10 @@ class DataCryptApp(QWidget):
             def copy_to_clipboard():
                 QApplication.clipboard().setText(public_key)
                 copied_label.setText("COPIED")
-                # Use a QTimer that is a child of the dialog, so it will be deleted with the dialog
                 timer = QTimer(dialog)
                 timer.setSingleShot(True)
                 def clear_label():
-                    if copied_label:  # Only clear if label still exists
+                    if copied_label:
                         copied_label.setText("")
                 timer.timeout.connect(clear_label)
                 timer.start(2000)
