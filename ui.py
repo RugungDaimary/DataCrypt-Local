@@ -343,7 +343,6 @@ class DataCryptApp(QWidget):
                 return
 
         key_file = encrypted_file.rsplit(".", 1)[0] + ".key"
-        # Use a relative path to access the private key
         private_key_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "keys", "private_key.pem")
 
         if not os.path.exists(private_key_path):
@@ -364,26 +363,46 @@ class DataCryptApp(QWidget):
             msg.exec()
             return
 
-        try:
-            decrypt_file(encrypted_file, key_file, private_key_path)
-        except ValueError:
+        # Prompt for sender's public key
+        dialog = QInputDialog(self)
+        dialog.setWindowTitle("Sender Public Key")
+        dialog.setLabelText("Enter sender's public key:")
+        dialog.setFixedSize(400, 200)
+        if dialog.exec() == QInputDialog.DialogCode.Accepted:
+            sender_public_key = dialog.textValue()
+            if sender_public_key:
+                try:
+                    decrypt_file(encrypted_file, key_file, private_key_path, sender_public_key)
+                except ValueError as e:
+                    msg = QMessageBox(self)
+                    msg.setWindowTitle("Error")
+                    msg.setText(f"Failed to decrypt: {str(e)}")
+                    msg.setIcon(QMessageBox.Icon.Warning)
+                    msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+                    msg.exec()
+                    return
+                msg = QMessageBox(self)
+                msg.setWindowTitle("Success")
+                msg.setText("File decrypted successfully!")
+                msg.setIcon(QMessageBox.Icon.Information)
+                msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+                reply = msg.exec()
+                if reply == QMessageBox.StandardButton.Ok:
+                    self.deselect_file()
+            else:
+                msg = QMessageBox(self)
+                msg.setWindowTitle("Cancelled")
+                msg.setText("Decryption cancelled or no key provided.")
+                msg.setIcon(QMessageBox.Icon.Warning)
+                msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg.exec()
+        else:
             msg = QMessageBox(self)
-            msg.setWindowTitle("Error")
-            msg.setText("Failed to decrypt. The file or key may be incorrect.")
+            msg.setWindowTitle("Cancelled")
+            msg.setText("Decryption cancelled.")
             msg.setIcon(QMessageBox.Icon.Warning)
             msg.setStandardButtons(QMessageBox.StandardButton.Ok)
             msg.exec()
-            return
-        
-        msg = QMessageBox(self)
-        msg.setWindowTitle("Success")
-        msg.setText("File decrypted successfully!")
-        msg.setIcon(QMessageBox.Icon.Information)
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-        reply = msg.exec()
-        
-        if reply == QMessageBox.StandardButton.Ok:
-            self.deselect_file()
     
     def generate_keys(self):
         if generate_key_pair():

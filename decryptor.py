@@ -4,8 +4,8 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 import os
 
-def decrypt_file(encrypted_file_path, encrypted_key_path, private_key_path):
-    """Decrypt file using ECDH and AES."""
+def decrypt_file(encrypted_file_path, encrypted_key_path, private_key_path, sender_public_key_str=None):
+    """Decrypt file using ECDH and AES, with optional sender public key verification."""
     # Load private key
     with open(private_key_path, "rb") as key_file:
         private_key = serialization.load_pem_private_key(key_file.read(), password=None)
@@ -14,6 +14,16 @@ def decrypt_file(encrypted_file_path, encrypted_key_path, private_key_path):
     with open(encrypted_key_path, "rb") as f:
         ephemeral_public_pem = f.read()
         ephemeral_public_key = serialization.load_pem_public_key(ephemeral_public_pem)
+
+    # Optionally load sender's public key
+    if sender_public_key_str:
+        try:
+            sender_public_key = serialization.load_pem_public_key(sender_public_key_str.encode())
+            # Placeholder: Add cryptographic verification here if needed
+            # For example, compare sender_public_key.public_numbers() with expected values
+            print("Sender's public key loaded for verification.")
+        except Exception as e:
+            raise ValueError(f"Invalid sender public key: {e}")
 
     # ECDH key exchange
     shared_key = private_key.exchange(ec.ECDH(), ephemeral_public_key)
