@@ -49,6 +49,8 @@ def decrypt_file(encrypted_file_path, encrypted_key_path, private_key_path, send
 
     # Remove padding
     pad_len = decrypted_padded_data[-1]
+    if pad_len < 1 or pad_len > 16:
+        raise ValueError("Invalid padding detected. Decryption failed.")
     decrypted_data = decrypted_padded_data[:-pad_len]
 
     # Save decrypted file
