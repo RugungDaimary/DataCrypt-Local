@@ -540,7 +540,7 @@ def main():
     
     # Create and display the splash screen
     try:
-        print("hello")
+        print("Welcome the UI has started")
     except Exception:
         pass
 
